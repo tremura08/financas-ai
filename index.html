@@ -300,7 +300,6 @@
         cursor: pointer;
       }
 
-      /* Estilos dos Botões de Ação na Aba Amigos */
       .amigo-actions {
         display: flex;
         gap: 8px;
@@ -411,8 +410,20 @@
       </div>
 
       <div id="content-config" class="tab-content px-4">
+        <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">Dados de Pagamento</h3>
+        <!-- Novo container para o PIX -->
+        <div class="md-card">
+          <p class="text-xs font-bold mb-3 text-blue-300">Configurar Cobrança</p>
+          <div class="space-y-2">
+            <label class="text-[9px] text-slate-500 font-bold uppercase ml-2">Meu pix é:</label>
+            <input type="text" id="config-pix-chave" placeholder="Digite sua chave PIX aqui" class="text-input" onchange="updatePixConfig(this.value)" />
+            <p class="text-[9px] text-slate-600 mt-1 italic">* Esta chave será enviada nas mensagens de cobrança.</p>
+          </div>
+        </div>
+
         <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">Saldos em Conta</h3>
         <div id="saldos-bancos-lista" class="space-y-3 mb-8"></div>
+        
         <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">Preferências</h3>
         <div class="md-card flex items-center justify-between py-4">
           <div>
@@ -526,7 +537,10 @@
           { nome: "Nubank", fechamento: 4, vencimento: 11, saldoInicial: 0 },
           { nome: "Inter", fechamento: 16, vencimento: 23, saldoInicial: 0 },
         ],
-        config: { notificacoesAtivas: false },
+        config: { 
+          notificacoesAtivas: false,
+          pix: "" // Chave PIX armazenada nas configurações
+        },
       };
       let currentFormMode = "gasto";
 
@@ -623,8 +637,7 @@
       function marcarAmigoComoPago(nomeAmigo) {
         const filtroMesStr = document.getElementById("filtro-mes").value;
         const [fY, fM] = filtroMesStr.split("-").map(Number);
-        const dataFiltro = new Date(fY, fM - 1, 1);
-
+        
         dados.lancamentos = dados.lancamentos.filter(l => {
             const dStart = getInvoiceMonth(l.dataRegistro, l.banco, l.metodo);
             const isNoMes = dStart.getFullYear() === fY && dStart.getMonth() === (fM - 1);
@@ -643,8 +656,9 @@
       }
 
       function cobrarNoWhatsapp(nomeAmigo, total, logs) {
-        // Formatação da mensagem conforme solicitado
-        const msg = `Olá ${nomeAmigo}! 👋\n\nEstou passando para te enviar o resumo das nossas despesas deste mês:\n\n*Detalhes:*\n${logs.map(l => "• " + l).join("\n")}\n\n*Total a pagar: R$ ${total.toFixed(2)}*\n\nMeu pix é 16992652060. Não se esqueça de mandar o comprovante! 💸`;
+        // Agora usa a chave PIX definida pelo usuário nas configurações
+        const chavePix = dados.config.pix || "[CHAVE PIX NÃO CONFIGURADA]";
+        const msg = `Olá ${nomeAmigo}! 👋\n\nEstou passando para te enviar o resumo das nossas despesas deste mês:\n\n*Detalhes:*\n${logs.map(l => "• " + l).join("\n")}\n\n*Total a pagar: R$ ${total.toFixed(2)}*\n\nMeu pix é ${chavePix}. Não se esqueça de mandar o comprovante! 💸`;
         const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
         window.open(url, '_blank');
       }
@@ -742,6 +756,12 @@
         document.getElementById("total-amigos-mes").className = "text-[10px] font-bold text-green-400";
       }
 
+      function updatePixConfig(valor) {
+        dados.config.pix = valor.trim();
+        saveData();
+        showToast("PIX Atualizado!");
+      }
+
       function updateSaldoBanco(index, valor) {
         dados.bancos[index].saldoInicial = parseFloat(valor) || 0;
         saveData();
@@ -750,6 +770,7 @@
 
       function renderSaldosAjustes() {
         const list = document.getElementById("saldos-bancos-lista");
+        if (!list) return;
         list.innerHTML = "";
         dados.bancos.forEach((b, i) => {
           list.innerHTML += `<div class="md-card flex items-center justify-between py-4"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="font-bold text-sm text-white">${b.nome}</span></div><div class="flex items-center gap-2"><span class="text-[10px] text-slate-500 font-bold">R$</span><input type="number" step="0.01" class="input-inline-edit" value="${b.saldoInicial.toFixed(2)}" onchange="updateSaldoBanco(${i}, this.value)"></div></div>`;
@@ -787,6 +808,7 @@
 
       function renderConfigBancos() {
         const list = document.getElementById("config-bancos-lista");
+        if (!list) return;
         list.innerHTML = "";
         dados.bancos.forEach((b, i) => {
           list.innerHTML += `<div class="md-card flex items-center justify-between py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div><div><p class="font-bold text-sm text-white">${b.nome}</p><p class="text-[9px] text-slate-500 uppercase">Fecha dia ${b.fechamento} • Vence dia ${b.vencimento}</p></div></div><button onclick="removeBank(${i})" class="delete-btn-sm h-10 w-10"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button></div>`;
@@ -838,12 +860,33 @@
       function closeForm() { document.getElementById("formSheet").classList.remove("active"); document.getElementById("scrim").classList.remove("active"); }
       function showToast(m) { const t = document.getElementById("toast"); t.innerText = m; t.style.opacity = "1"; setTimeout(() => (t.style.opacity = "0"), 2000); }
       function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(dados)); }
-      function loadData() { const s = localStorage.getItem(STORAGE_KEY); if (s) dados = JSON.parse(s); }
+      
+      function loadData() { 
+        const s = localStorage.getItem(STORAGE_KEY); 
+        if (s) {
+          const loaded = JSON.parse(s);
+          // Migração suave: garante que config e pix existam se vierem de versão antiga
+          if (!loaded.config) loaded.config = { notificacoesAtivas: false, pix: "" };
+          if (loaded.config.pix === undefined) loaded.config.pix = "";
+          dados = loaded;
+        }
+      }
 
       window.onload = () => {
-        loadData(); setupMonthSelector(); renderConfigBancos(); renderSaldosAjustes(); updateBancosRadio(); renderDashboard(); updateFormVisibility();
+        loadData(); 
+        setupMonthSelector(); 
+        renderConfigBancos(); 
+        renderSaldosAjustes(); 
+        updateBancosRadio(); 
+        renderDashboard(); 
+        updateFormVisibility();
+        
+        // Inicializa inputs da aba Ajustes
         const toggle = document.getElementById("notif-toggle");
         if (toggle) toggle.checked = dados.config.notificacoesAtivas;
+        
+        const pixInput = document.getElementById("config-pix-chave");
+        if (pixInput) pixInput.value = dados.config.pix || "";
       };
     </script>
   </body>
