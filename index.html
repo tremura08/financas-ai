@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Finanças AI - Gestão de Amigos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+      :root {
+        --primary: #a1c9ff;
+        --bg: #0f1113;
+        --surface: #1a1c1e;
+        --surface-variant: #26292c;
+        --on-surface: #e2e2e6;
+        --outline: #3f4144;
+        --accent: #00497d;
+        --whatsapp: #25d366;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background-color: var(--bg);
+        color: var(--on-surface);
+        -webkit-tap-highlight-color: transparent;
+        overflow-x: hidden;
+      }
+
+      .app-container {
+        max-width: 500px;
+        margin: 0 auto;
+        min-height: 100vh;
+        padding-bottom: 140px;
+      }
+
+      .md-card {
+        background-color: var(--surface);
+        border-radius: 24px;
+        padding: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 16px;
+      }
+
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 500px;
+        background-color: rgba(15, 17, 19, 0.95);
+        backdrop-filter: blur(20px);
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding: 10px 0 calc(10px + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--outline);
+        z-index: 100;
+      }
+
+      .nav-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        color: #8d9199;
+        flex: 1;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+
+      .nav-item.active {
+        color: var(--primary);
+      }
+
+      .nav-icon-bg {
+        width: 48px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 16px;
+        transition: all 0.2s ease;
+      }
+
+      .nav-item.active .nav-icon-bg {
+        background-color: var(--accent);
+        color: #d1e4ff;
+      }
+
+      .nav-add-btn {
+        width: 52px;
+        height: 52px;
+        background-color: var(--primary);
+        color: #003258;
+        border-radius: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-top: -15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+      .nav-add-btn:active {
+        transform: scale(0.9);
+      }
+
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .bottom-sheet {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translate(-50%, 100%);
+        width: 100%;
+        max-width: 500px;
+        height: 90vh;
+        background-color: var(--bg);
+        border-radius: 32px 32px 0 0;
+        transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+        z-index: 200;
+        overflow-y: auto;
+        border-top: 1px solid var(--outline);
+      }
+
+      .bottom-sheet.active {
+        transform: translate(-50%, 0);
+      }
+
+      .scrim {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+        z-index: 150;
+      }
+      .scrim.active {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .form-card {
+        background-color: var(--surface);
+        border-radius: 20px;
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+
+      .text-input {
+        width: 100%;
+        background: var(--surface-variant);
+        border: 1px solid var(--outline);
+        border-radius: 12px;
+        padding: 12px 16px;
+        color: white;
+        font-size: 15px;
+        outline: none;
+      }
+
+      .month-selector-container {
+        display: flex;
+        align-items: center;
+        background: var(--surface-variant);
+        border: 1px solid var(--outline);
+        border-radius: 12px;
+        padding: 0 10px;
+        height: 42px;
+      }
+
+      .month-selector {
+        appearance: none;
+        background: transparent;
+        border: none;
+        color: var(--primary);
+        font-size: 11px;
+        font-weight: 800;
+        outline: none;
+        text-align: center;
+        text-align-last: center;
+        width: 110px;
+        cursor: pointer;
+        padding: 0 4px;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .month-selector option {
+        background-color: var(--surface-variant);
+        color: var(--primary);
+        padding: 10px;
+      }
+
+      .nav-arrow {
+        cursor: pointer;
+        padding: 8px 4px;
+        color: var(--primary);
+        opacity: 0.7;
+        transition: opacity 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .radio-card {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid var(--outline);
+        background: var(--surface-variant);
+        color: #8d9199;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        text-align: center;
+      }
+
+      input[type="radio"]:checked + .radio-card {
+        border-color: var(--primary);
+        background-color: var(--accent);
+        color: white;
+      }
+
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+      }
+      .toggle-switch input { opacity: 0; width: 0; height: 0; }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: var(--surface-variant);
+        transition: 0.4s;
+        border-radius: 24px;
+        border: 1px solid var(--outline);
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px; width: 16px;
+        left: 3px; bottom: 3px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+      input:checked + .slider { background-color: var(--accent); border-color: var(--primary); }
+      input:checked + .slider:before { transform: translateX(20px); }
+
+      .input-inline-edit {
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid var(--outline);
+        color: var(--primary);
+        font-weight: bold;
+        text-align: right;
+        width: 80px;
+        outline: none;
+      }
+
+      .delete-btn-sm {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        background: var(--surface-variant);
+        border: 1px solid var(--outline);
+        border-radius: 12px;
+        color: #f87171;
+        cursor: pointer;
+      }
+
+      /* Estilos dos Botões de Ação na Aba Amigos */
+      .amigo-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .btn-pago {
+        flex: 1;
+        background: rgba(161, 201, 255, 0.1);
+        border: 1px solid var(--primary);
+        color: var(--primary);
+        font-size: 10px;
+        font-weight: 900;
+        padding: 10px;
+        border-radius: 12px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        transition: all 0.2s;
+      }
+      .btn-pago:active { background: var(--primary); color: #000; }
+
+      .btn-whatsapp {
+        width: 44px;
+        height: 44px;
+        background: #25d36620;
+        border: 1px solid #25d366;
+        color: #25d366;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        transition: all 0.2s;
+      }
+      .btn-whatsapp:active { background: #25d366; color: white; }
+
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+      <header class="p-6 pb-2">
+        <div class="mb-4 text-center">
+          <span class="text-[10px] font-bold tracking-widest uppercase">
+            <span class="text-blue-400">Desenvolvido por</span>
+            <span class="text-purple-400">Rafael Tremura</span>
+          </span>
+        </div>
+
+        <div class="flex items-center justify-between mb-2">
+          <div>
+            <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Resumo Financeiro</p>
+            <h1 class="text-2xl font-bold text-white leading-none">Minha Carteira</h1>
+          </div>
+          
+          <div class="month-selector-container">
+            <div class="nav-arrow" onclick="changeMonth(-1)">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                <path d="m15 18-6-6 6-6"/>
+              </svg>
+            </div>
+            <select id="filtro-mes" onchange="handleMonthChange()" class="month-selector"></select>
+            <div class="nav-arrow" onclick="changeMonth(1)">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                <path d="m9 18 6-6-6-6"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-end justify-between">
+          <p class="text-xs text-slate-500">
+            Estimativa de Saldo: <span id="saldo-geral">R$ 0,00</span>
+          </p>
+        </div>
+      </header>
+
+      <div id="content-resumo" class="tab-content active px-4">
+        <div id="bancos-container"></div>
+      </div>
+
+      <div id="content-amigos" class="tab-content px-4">
+        <div class="flex justify-between items-center mb-4 px-2">
+          <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Valores a Receber</h3>
+          <span id="total-amigos-mes" class="text-[10px] font-bold text-blue-300">R$ 0,00</span>
+        </div>
+        <div id="amigos-container" class="space-y-4"></div>
+      </div>
+
+      <div id="content-cartoes" class="tab-content px-4">
+        <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">Gestão de Bancos e Cartões</h3>
+        <div id="config-bancos-lista" class="space-y-3 mb-6"></div>
+        <div class="md-card">
+          <p class="text-xs font-bold mb-3 text-blue-300">Adicionar Novo Banco</p>
+          <div class="space-y-3">
+            <input type="text" id="new-bank-name" placeholder="Nome do Banco (Ex: Nubank)" class="text-input" />
+            <div class="flex gap-2">
+              <div class="flex-1">
+                <label class="text-[9px] text-slate-500 font-bold uppercase ml-2">Dia Fechamento</label>
+                <input type="number" id="new-bank-closing" placeholder="Ex: 5" class="text-input text-xs mt-1" />
+              </div>
+              <div class="flex-1">
+                <label class="text-[9px] text-slate-500 font-bold uppercase ml-2">Dia Vencimento</label>
+                <input type="number" id="new-bank-due" placeholder="Ex: 12" class="text-input text-xs mt-1" />
+              </div>
+            </div>
+            <button onclick="addBank()" class="w-full bg-blue-500/20 text-blue-400 py-3 rounded-xl font-bold text-sm mt-2">Salvar Novo Cartão</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="content-config" class="tab-content px-4">
+        <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">Saldos em Conta</h3>
+        <div id="saldos-bancos-lista" class="space-y-3 mb-8"></div>
+        <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">Preferências</h3>
+        <div class="md-card flex items-center justify-between py-4">
+          <div>
+            <p class="font-bold text-sm text-white">Notificações de Vencimento</p>
+            <p class="text-[10px] text-slate-500">Avisar quando a fatura estiver próxima</p>
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="notif-toggle" onchange="handleToggleNotif()" />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <nav class="bottom-nav">
+        <div onclick="switchTab('resumo')" id="nav-resumo" class="nav-item active">
+          <div class="nav-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg></div>
+          <span class="text-[9px] font-bold">Início</span>
+        </div>
+        <div onclick="switchTab('amigos')" id="nav-amigos" class="nav-item">
+          <div class="nav-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg></div>
+          <span class="text-[9px] font-bold">Amigos</span>
+        </div>
+        <div onclick="openForm()" class="nav-add-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12h14" /><path d="M12 5v14" /></svg>
+        </div>
+        <div onclick="switchTab('cartoes')" id="nav-cartoes" class="nav-item">
+          <div class="nav-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect width="20" height="14" x="2" y="5" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg></div>
+          <span class="text-[9px] font-bold">Cartões</span>
+        </div>
+        <div onclick="switchTab('config')" id="nav-config" class="nav-item">
+          <div class="nav-icon-bg"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1-2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg></div>
+          <span class="text-[9px] font-bold">Ajustes</span>
+        </div>
+      </nav>
+    </div>
+
+    <div id="scrim" onclick="closeForm()" class="scrim"></div>
+    <div id="formSheet" class="bottom-sheet">
+      <div class="p-6">
+        <div class="w-10 h-1 bg-outline rounded-full mx-auto mb-8"></div>
+        <div class="flex bg-[#1c1f23] rounded-xl p-1 mb-6">
+          <button type="button" id="tab-form-gasto" onclick="setFormMode('gasto')" class="flex-1 py-2 text-[10px] font-black rounded-lg transition-all bg-blue-600 text-white">GASTOS</button>
+          <button type="button" id="tab-form-recebimento" onclick="setFormMode('recebimento')" class="flex-1 py-2 text-[10px] font-black text-gray-500">RECEBIMENTOS</button>
+        </div>
+        <form id="financeForm" onsubmit="handleFormSubmit(event)" class="pb-12">
+          <div id="sec-quem-pagou" class="form-card">
+            <span class="block text-[11px] text-slate-500 font-bold mb-3 uppercase">Origem do Gasto</span>
+            <div class="flex gap-3">
+              <label class="flex-1"><input type="radio" name="sub_tipo_gasto" value="eu" class="hidden" checked onchange="updateFormVisibility()"><div class="radio-card">EU PAGUEI</div></label>
+              <label class="flex-1"><input type="radio" name="sub_tipo_gasto" value="outro" class="hidden" onchange="updateFormVisibility()"><div class="radio-card">ALGUÉM PAGOU</div></label>
+            </div>
+          </div>
+          <div class="form-card"><input type="text" id="input-desc" placeholder="Descrição" class="text-input" required /></div>
+          <div class="form-card"><input type="number" step="0.01" id="input-valor" placeholder="Valor Total (R$)" class="text-input" required /></div>
+          <div id="container-eu-paguei">
+            <div class="form-card">
+              <span class="block text-[11px] text-slate-500 font-bold mb-3 uppercase">Categoria</span>
+              <select id="input-cat" class="text-input">
+                <option value="compras">🛒 Compras</option>
+                <option value="comida">🍱 Comida</option>
+                <option value="transporte">🚗 Transporte</option>
+                <option value="lazer">🍹 Lazer</option>
+                <option value="outros">✨ Outros</option>
+              </select>
+            </div>
+            <div class="form-card">
+              <span class="block text-[11px] text-slate-500 font-bold mb-3 uppercase">Selecione o Banco</span>
+              <div id="bancos-radio-container" class="grid grid-cols-2 gap-3"></div>
+            </div>
+            <div class="form-card">
+              <span class="block text-[11px] text-slate-500 font-bold mb-3 uppercase">Forma de Pagamento</span>
+              <select id="input-metodo" class="text-input" onchange="updateFormVisibility()">
+                <option value="pix">PIX</option>
+                <option value="debito">Débito</option>
+                <option value="credito">Crédito</option>
+              </select>
+            </div>
+            <div id="sec-parcelas" class="form-card hidden">
+              <span class="block text-[11px] text-slate-500 font-bold mb-3 uppercase">Parcelamento</span>
+              <input type="number" id="input-parcelas" value="1" min="1" class="text-input" placeholder="Nº de Parcelas" />
+            </div>
+            <div class="form-card">
+              <div onclick="toggleDivisaoAmigos()" class="flex justify-between items-center cursor-pointer">
+                <span class="text-[11px] text-blue-400 font-bold uppercase tracking-widest">Dividi esse gasto?</span>
+                <svg id="arrow-divisao" class="transition-transform" width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></svg>
+              </div>
+              <div id="divisao-amigos-inputs" class="hidden mt-4 space-y-3">
+                <div id="amigos-rows-container"></div>
+                <button type="button" onclick="addAmigoRow()" class="text-[10px] font-black text-blue-400 uppercase mt-2">+ Adicionar Pessoa</button>
+              </div>
+            </div>
+          </div>
+          <div id="container-externo" class="hidden">
+            <div class="form-card">
+              <span class="block text-[11px] text-slate-500 font-bold mb-3 uppercase">Pessoa Envolvida</span>
+              <input type="text" id="input-nome-externo" placeholder="Nome da pessoa" class="text-input" />
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-blue-400 py-4 rounded-2xl text-slate-900 font-bold mt-4 uppercase tracking-widest text-xs">Salvar Registro</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="toast" class="fixed top-12 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-3 rounded-full font-bold text-sm shadow-2xl opacity-0 transition-all z-[300]"></div>
+
+    <script>
+      const STORAGE_KEY = "financas_ai_v14_final";
+      let dados = {
+        lancamentos: [],
+        bancos: [
+          { nome: "Nubank", fechamento: 4, vencimento: 11, saldoInicial: 0 },
+          { nome: "Inter", fechamento: 16, vencimento: 23, saldoInicial: 0 },
+        ],
+        config: { notificacoesAtivas: false },
+      };
+      let currentFormMode = "gasto";
+
+      function setFormMode(mode) {
+        currentFormMode = mode;
+        const btnG = document.getElementById("tab-form-gasto");
+        const btnR = document.getElementById("tab-form-recebimento");
+        if (mode === "gasto") {
+          btnG.className = "flex-1 py-2 text-[10px] font-black rounded-lg transition-all bg-blue-600 text-white";
+          btnR.className = "flex-1 py-2 text-[10px] font-black text-gray-500";
+        } else {
+          btnR.className = "flex-1 py-2 text-[10px] font-black rounded-lg transition-all bg-blue-600 text-white";
+          btnG.className = "flex-1 py-2 text-[10px] font-black text-gray-500";
+        }
+        updateFormVisibility();
+      }
+
+      function updateFormVisibility() {
+        const subTipoEl = document.querySelector('input[name="sub_tipo_gasto"]:checked');
+        const subTipo = subTipoEl ? subTipoEl.value : "eu";
+        const metodo = document.getElementById("input-metodo").value;
+        const isRecebimento = currentFormMode === "recebimento";
+        const isEuPaguei = !isRecebimento && subTipo === "eu";
+        document.getElementById("sec-quem-pagou").classList.toggle("hidden", isRecebimento);
+        document.getElementById("container-eu-paguei").classList.toggle("hidden", !isEuPaguei);
+        document.getElementById("container-externo").classList.toggle("hidden", isEuPaguei);
+        document.getElementById("sec-parcelas").classList.toggle("hidden", !isEuPaguei || metodo !== "credito");
+      }
+
+      function toggleDivisaoAmigos() {
+        const cont = document.getElementById("divisao-amigos-inputs");
+        const arrow = document.getElementById("arrow-divisao");
+        cont.classList.toggle("hidden");
+        arrow.style.transform = cont.classList.contains("hidden") ? "rotate(0deg)" : "rotate(180deg)";
+      }
+
+      function addAmigoRow() {
+        const container = document.getElementById("amigos-rows-container");
+        const div = document.createElement("div");
+        div.className = "flex gap-2";
+        div.innerHTML = `<input type="text" placeholder="Nome" class="text-input text-xs amigo-nome-input"><input type="number" step="0.01" placeholder="R$ valor" class="text-input text-xs amigo-valor-input w-24"><button type="button" onclick="removeAmigoRow(this)" class="delete-btn-sm"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>`;
+        container.appendChild(div);
+      }
+
+      function removeAmigoRow(btn) { btn.parentElement.remove(); }
+
+      function handleFormSubmit(e) {
+        e.preventDefault();
+        const desc = document.getElementById("input-desc").value;
+        const valorTotal = parseFloat(document.getElementById("input-valor").value);
+        const dataIso = new Date().toISOString();
+        const subTipoEl = document.querySelector('input[name="sub_tipo_gasto"]:checked');
+        const subTipo = subTipoEl ? subTipoEl.value : "eu";
+
+        let novo = { id: Date.now(), desc, valorTotal, dataRegistro: dataIso, amigos: [] };
+        if (currentFormMode === "gasto") {
+          if (subTipo === "eu") {
+            novo.tipo = "gasto_eu";
+            novo.banco = document.querySelector('input[name="banco"]:checked').value;
+            novo.metodo = document.getElementById("input-metodo").value;
+            novo.parcelas = novo.metodo === "credito" ? parseInt(document.getElementById("input-parcelas").value) : 1;
+            novo.categoria = document.getElementById("input-cat").value;
+            document.querySelectorAll("#amigos-rows-container > div").forEach((row) => {
+              const nome = row.querySelector(".amigo-nome-input").value.trim();
+              const valor = parseFloat(row.querySelector(".amigo-valor-input").value);
+              if (nome && valor) novo.amigos.push({ nome, valor });
+            });
+          } else {
+            novo.tipo = "gasto_alguem";
+            novo.amigoNome = document.getElementById("input-nome-externo").value.trim();
+            novo.valorTotal = -valorTotal;
+          }
+        } else {
+          novo.tipo = "recebimento";
+          novo.amigoNome = document.getElementById("input-nome-externo").value.trim();
+        }
+        dados.lancamentos.push(novo);
+        saveData();
+        renderDashboard();
+        closeForm();
+        e.target.reset();
+        document.getElementById("amigos-rows-container").innerHTML = "";
+        showToast("Registro Salvo!");
+      }
+
+      function getInvoiceMonth(dateStr, bancoNome, metodo) {
+        const date = new Date(dateStr);
+        if (metodo !== "credito") return new Date(date.getFullYear(), date.getMonth(), 1);
+        const b = dados.bancos.find((b) => b.nome === bancoNome) || { fechamento: 10 };
+        if (date.getDate() >= b.fechamento) return new Date(date.getFullYear(), date.getMonth() + 1, 1);
+        return new Date(date.getFullYear(), date.getMonth(), 1);
+      }
+
+      function marcarAmigoComoPago(nomeAmigo) {
+        const filtroMesStr = document.getElementById("filtro-mes").value;
+        const [fY, fM] = filtroMesStr.split("-").map(Number);
+        const dataFiltro = new Date(fY, fM - 1, 1);
+
+        dados.lancamentos = dados.lancamentos.filter(l => {
+            const dStart = getInvoiceMonth(l.dataRegistro, l.banco, l.metodo);
+            const isNoMes = dStart.getFullYear() === fY && dStart.getMonth() === (fM - 1);
+            
+            if (isNoMes && l.amigoNome === nomeAmigo) return false;
+            
+            if (isNoMes && l.tipo === "gasto_eu") {
+                l.amigos = l.amigos.filter(a => a.nome !== nomeAmigo);
+            }
+            return true;
+        });
+
+        saveData();
+        renderDashboard();
+        showToast(`Pagamento de ${nomeAmigo} registrado!`);
+      }
+
+      function cobrarNoWhatsapp(nomeAmigo, total, logs) {
+        // Formatação da mensagem conforme solicitado
+        const msg = `Olá ${nomeAmigo}! 👋\n\nEstou passando para te enviar o resumo das nossas despesas deste mês:\n\n*Detalhes:*\n${logs.map(l => "• " + l).join("\n")}\n\n*Total a pagar: R$ ${total.toFixed(2)}*\n\nMeu pix é 16992652060. Não se esqueça de mandar o comprovante! 💸`;
+        const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+        window.open(url, '_blank');
+      }
+
+      function renderDashboard() {
+        const contBancos = document.getElementById("bancos-container");
+        const contAmigos = document.getElementById("amigos-container");
+        const filtroMesStr = document.getElementById("filtro-mes").value;
+        if (!filtroMesStr) return;
+
+        const [fY, fM] = filtroMesStr.split("-").map(Number);
+        const dataFiltro = new Date(fY, fM - 1, 1);
+        contBancos.innerHTML = "";
+        contAmigos.innerHTML = "";
+
+        let totalAmigosGlobal = 0;
+        const mapaAmigos = {};
+        let tGastosNoBanco = 0;
+        let saldoInicialTotal = dados.bancos.reduce((acc, b) => acc + (b.saldoInicial || 0), 0);
+
+        dados.bancos.forEach((b) => {
+          let items = "", somaBancoNoMes = 0;
+          dados.lancamentos.filter((l) => l.banco === b.nome).forEach((l) => {
+            const dStart = getInvoiceMonth(l.dataRegistro, l.banco, l.metodo);
+            const diff = (dataFiltro.getFullYear() - dStart.getFullYear()) * 12 + (dataFiltro.getMonth() - dStart.getMonth());
+
+            if (diff >= 0 && diff < l.parcelas) {
+              const vp = l.valorTotal / l.parcelas;
+              somaBancoNoMes += vp;
+              tGastosNoBanco += vp;
+              items += `<div class="flex justify-between py-2 border-b border-white/5 last:border-0"><div><p class="text-[12px] text-white font-medium">${l.desc}</p><p class="text-[9px] text-slate-500 uppercase">${l.metodo} • ${l.parcelas > 1 ? `${diff + 1}/${l.parcelas}` : "À Vista"}</p></div><p class="text-[12px] font-bold">R$ ${vp.toFixed(2)}</p></div>`;
+
+              l.amigos.forEach((amg) => {
+                if (!mapaAmigos[amg.nome]) mapaAmigos[amg.nome] = { total: 0, logs: [] };
+                const valorParteAmigo = amg.valor / l.parcelas;
+                mapaAmigos[amg.nome].total += valorParteAmigo;
+                mapaAmigos[amg.nome].logs.push(`${l.desc}: R$ ${valorParteAmigo.toFixed(2)}`);
+              });
+            }
+          });
+          if (somaBancoNoMes > 0) {
+            contBancos.innerHTML += `<div class="md-card"><div class="flex justify-between items-center mb-4"><div><span class="text-[10px] font-black text-blue-400 uppercase tracking-widest">${b.nome}</span></div><p class="text-[16px] font-black text-white">R$ ${somaBancoNoMes.toFixed(2)}</p></div><div class="bg-black/20 rounded-xl p-3">${items}</div></div>`;
+          }
+        });
+
+        dados.lancamentos.filter((l) => l.tipo === "gasto_alguem").forEach((l) => {
+          const dStart = getInvoiceMonth(l.dataRegistro, l.banco, l.metodo);
+          if(dStart.getFullYear() === fY && dStart.getMonth() === (fM - 1)) {
+            contBancos.innerHTML += `<div class="md-card border-red-500/20"><div class="flex justify-between items-center"><p class="text-[10px] font-black text-red-400 uppercase">Devo para: ${l.amigoNome}</p><p class="font-bold">R$ ${Math.abs(l.valorTotal).toFixed(2)}</p></div><p class="text-[11px] text-slate-500">${l.desc}</p></div>`;
+            if (!mapaAmigos[l.amigoNome]) mapaAmigos[l.amigoNome] = { total: 0, logs: [] };
+            mapaAmigos[l.amigoNome].total += l.valorTotal;
+            mapaAmigos[l.amigoNome].logs.push(`${l.desc}: -R$ ${Math.abs(l.valorTotal).toFixed(2)}`);
+          }
+        });
+
+        dados.lancamentos.filter((l) => l.tipo === "recebimento").forEach((l) => {
+          const dStart = getInvoiceMonth(l.dataRegistro, l.banco, l.metodo);
+          if(dStart.getFullYear() === fY && dStart.getMonth() === (fM - 1)) {
+            if (!mapaAmigos[l.amigoNome]) mapaAmigos[l.amigoNome] = { total: 0, logs: [] };
+            mapaAmigos[l.amigoNome].total += l.valorTotal;
+            mapaAmigos[l.amigoNome].logs.push(`${l.desc}: +R$ ${l.valorTotal.toFixed(2)}`);
+          }
+        });
+
+        let totalAReceberGeral = 0;
+        Object.keys(mapaAmigos).forEach((nome) => {
+          const saldoAmigo = mapaAmigos[nome].total;
+          if (saldoAmigo > 0) {
+            totalAReceberGeral += saldoAmigo;
+            const logStr = JSON.stringify(mapaAmigos[nome].logs);
+            contAmigos.innerHTML += `
+              <div class="md-card">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="font-bold text-sm text-white">${nome}</span>
+                  <span class="font-black text-green-400">R$ ${saldoAmigo.toFixed(2)}</span>
+                </div>
+                <div class="bg-black/20 p-2 rounded-lg text-[10px] text-slate-400 leading-relaxed">
+                  ${mapaAmigos[nome].logs.join("<br>")}
+                </div>
+                <div class="amigo-actions">
+                    <button onclick='marcarAmigoComoPago("${nome}")' class="btn-pago">PAGO</button>
+                    <button onclick='cobrarNoWhatsapp("${nome}", ${saldoAmigo}, ${logStr})' class="btn-whatsapp">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.414 0 .018 5.394 0 12.03c0 2.122.554 4.197 1.604 6.04L0 24l6.104-1.601a11.812 11.812 0 005.94 1.597h.005c6.632 0 12.028-5.394 12.03-12.032a11.761 11.761 0 00-3.486-8.452"/></svg>
+                    </button>
+                </div>
+              </div>`;
+          }
+          totalAmigosGlobal += saldoAmigo;
+        });
+
+        const saldoFinal = saldoInicialTotal + totalAmigosGlobal - tGastosNoBanco;
+        document.getElementById("saldo-geral").innerText = `R$ ${saldoFinal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+        document.getElementById("saldo-geral").className = saldoFinal >= 0 ? "text-green-400 font-bold" : "text-red-400 font-bold";
+        document.getElementById("total-amigos-mes").innerText = `Total a Receber: R$ ${totalAReceberGeral.toFixed(2)}`;
+        document.getElementById("total-amigos-mes").className = "text-[10px] font-bold text-green-400";
+      }
+
+      function updateSaldoBanco(index, valor) {
+        dados.bancos[index].saldoInicial = parseFloat(valor) || 0;
+        saveData();
+        renderDashboard();
+      }
+
+      function renderSaldosAjustes() {
+        const list = document.getElementById("saldos-bancos-lista");
+        list.innerHTML = "";
+        dados.bancos.forEach((b, i) => {
+          list.innerHTML += `<div class="md-card flex items-center justify-between py-4"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="font-bold text-sm text-white">${b.nome}</span></div><div class="flex items-center gap-2"><span class="text-[10px] text-slate-500 font-bold">R$</span><input type="number" step="0.01" class="input-inline-edit" value="${b.saldoInicial.toFixed(2)}" onchange="updateSaldoBanco(${i}, this.value)"></div></div>`;
+        });
+      }
+
+      async function handleToggleNotif() {
+        const toggle = document.getElementById("notif-toggle");
+        if (toggle.checked) {
+          if (!("Notification" in window)) { showToast("Não suportado"); toggle.checked = false; return; }
+          const permission = await Notification.requestPermission();
+          if (permission !== "granted") { showToast("Permissão negada"); toggle.checked = false; return; }
+        }
+        dados.config.notificacoesAtivas = toggle.checked;
+        saveData();
+      }
+
+      function addBank() {
+        const nome = document.getElementById("new-bank-name").value.trim();
+        const fecha = parseInt(document.getElementById("new-bank-closing").value);
+        const vence = parseInt(document.getElementById("new-bank-due").value);
+        if (!nome || isNaN(fecha) || isNaN(vence)) { showToast("Preencha tudo"); return; }
+        dados.bancos.push({ nome, fechamento: fecha, vencimento: vence, saldoInicial: 0 });
+        saveData(); renderConfigBancos(); renderSaldosAjustes(); updateBancosRadio(); renderDashboard();
+        document.getElementById("new-bank-name").value = "";
+        document.getElementById("new-bank-closing").value = "";
+        document.getElementById("new-bank-due").value = "";
+        showToast("Banco adicionado!");
+      }
+
+      function removeBank(index) {
+        dados.bancos.splice(index, 1);
+        saveData(); renderConfigBancos(); renderSaldosAjustes(); updateBancosRadio(); renderDashboard();
+      }
+
+      function renderConfigBancos() {
+        const list = document.getElementById("config-bancos-lista");
+        list.innerHTML = "";
+        dados.bancos.forEach((b, i) => {
+          list.innerHTML += `<div class="md-card flex items-center justify-between py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div><div><p class="font-bold text-sm text-white">${b.nome}</p><p class="text-[9px] text-slate-500 uppercase">Fecha dia ${b.fechamento} • Vence dia ${b.vencimento}</p></div></div><button onclick="removeBank(${i})" class="delete-btn-sm h-10 w-10"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button></div>`;
+        });
+      }
+
+      function updateBancosRadio() {
+        const cont = document.getElementById("bancos-radio-container");
+        if (!cont) return;
+        cont.innerHTML = "";
+        dados.bancos.forEach((b, i) => {
+          cont.innerHTML += `<label class="flex-1"><input type="radio" name="banco" value="${b.nome}" class="hidden" ${i === 0 ? "checked" : ""}><div class="radio-card uppercase text-[10px]">${b.nome}</div></label>`;
+        });
+      }
+
+      function setupMonthSelector() {
+        const sel = document.getElementById("filtro-mes");
+        sel.innerHTML = "";
+        const hoje = new Date();
+        for (let i = -6; i <= 6; i++) {
+          const d = new Date(hoje.getFullYear(), hoje.getMonth() + i, 1);
+          const val = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+          const label = d.toLocaleString("pt-BR", { month: "long", year: "numeric" });
+          const opt = document.createElement("option");
+          opt.value = val;
+          opt.innerText = label.charAt(0).toUpperCase() + label.slice(1).replace(" de ", "/");
+          if (i === 0) opt.selected = true;
+          sel.appendChild(opt);
+        }
+      }
+
+      function changeMonth(direction) {
+        const sel = document.getElementById("filtro-mes");
+        const newIndex = sel.selectedIndex + direction;
+        if (newIndex >= 0 && newIndex < sel.options.length) { sel.selectedIndex = newIndex; handleMonthChange(); }
+      }
+
+      function handleMonthChange() { renderDashboard(); }
+
+      function switchTab(t) {
+        document.querySelectorAll(".nav-item").forEach((i) => i.classList.remove("active"));
+        document.getElementById(`nav-${t}`).classList.add("active");
+        document.querySelectorAll(".tab-content").forEach((c) => c.classList.remove("active"));
+        const content = document.getElementById(`content-${t}`);
+        if (content) content.classList.add("active");
+      }
+
+      function openForm() { document.getElementById("formSheet").classList.add("active"); document.getElementById("scrim").classList.add("active"); }
+      function closeForm() { document.getElementById("formSheet").classList.remove("active"); document.getElementById("scrim").classList.remove("active"); }
+      function showToast(m) { const t = document.getElementById("toast"); t.innerText = m; t.style.opacity = "1"; setTimeout(() => (t.style.opacity = "0"), 2000); }
+      function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(dados)); }
+      function loadData() { const s = localStorage.getItem(STORAGE_KEY); if (s) dados = JSON.parse(s); }
+
+      window.onload = () => {
+        loadData(); setupMonthSelector(); renderConfigBancos(); renderSaldosAjustes(); updateBancosRadio(); renderDashboard(); updateFormVisibility();
+        const toggle = document.getElementById("notif-toggle");
+        if (toggle) toggle.checked = dados.config.notificacoesAtivas;
+      };
+    </script>
+  </body>
+</html>
