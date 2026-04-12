@@ -394,7 +394,16 @@
           <p class="text-xs font-bold mb-3 text-blue-300">Adicionar Novo Banco</p>
           <div class="space-y-3">
             <input type="text" id="new-bank-name" placeholder="Nome do Banco (Ex: Nubank)" class="text-input" />
-            <div class="flex gap-2">
+            
+            <div class="form-card p-0 bg-transparent border-0">
+                <span class="block text-[11px] text-slate-500 font-bold mb-3 uppercase">Tipo de Conta</span>
+                <div class="flex gap-3">
+                  <label class="flex-1"><input type="radio" name="new-bank-type" value="credito" class="hidden" checked onchange="toggleBankDateInputs()"><div class="radio-card">CRÉDITO</div></label>
+                  <label class="flex-1"><input type="radio" name="new-bank-type" value="debito" class="hidden" onchange="toggleBankDateInputs()"><div class="radio-card">DÉBITO</div></label>
+                </div>
+            </div>
+
+            <div id="new-bank-dates-container" class="flex gap-2">
               <div class="flex-1">
                 <label class="text-[9px] text-slate-500 font-bold uppercase ml-2">Dia Fechamento</label>
                 <input type="number" id="new-bank-closing" placeholder="Ex: 5" class="text-input text-xs mt-1" />
@@ -404,14 +413,13 @@
                 <input type="number" id="new-bank-due" placeholder="Ex: 12" class="text-input text-xs mt-1" />
               </div>
             </div>
-            <button onclick="addBank()" class="w-full bg-blue-500/20 text-blue-400 py-3 rounded-xl font-bold text-sm mt-2">Salvar Novo Cartão</button>
+            <button onclick="addBank()" class="w-full bg-blue-500/20 text-blue-400 py-3 rounded-xl font-bold text-sm mt-2">Salvar Novo Banco</button>
           </div>
         </div>
       </div>
 
       <div id="content-config" class="tab-content px-4">
         <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4 px-2">Dados de Pagamento</h3>
-        <!-- Novo container para o PIX -->
         <div class="md-card">
           <p class="text-xs font-bold mb-3 text-blue-300">Configurar Cobrança</p>
           <div class="space-y-2">
@@ -469,6 +477,8 @@
           <button type="button" id="tab-form-recebimento" onclick="setFormMode('recebimento')" class="flex-1 py-2 text-[10px] font-black text-gray-500">RECEBIMENTOS</button>
         </div>
         <form id="financeForm" onsubmit="handleFormSubmit(event)" class="pb-12">
+          <input type="hidden" id="edit-id" value="">
+          
           <div id="sec-quem-pagou" class="form-card">
             <span class="block text-[11px] text-slate-500 font-bold mb-3 uppercase">Origem do Gasto</span>
             <div class="flex gap-3">
@@ -478,6 +488,7 @@
           </div>
           <div class="form-card"><input type="text" id="input-desc" placeholder="Descrição" class="text-input" required /></div>
           <div class="form-card"><input type="number" step="0.01" id="input-valor" placeholder="Valor Total (R$)" class="text-input" required /></div>
+          
           <div id="container-eu-paguei">
             <div class="form-card">
               <span class="block text-[11px] text-slate-500 font-bold mb-3 uppercase">Categoria</span>
@@ -521,8 +532,16 @@
               <span class="block text-[11px] text-slate-500 font-bold mb-3 uppercase">Pessoa Envolvida</span>
               <input type="text" id="input-nome-externo" placeholder="Nome da pessoa" class="text-input" />
             </div>
+            <div class="form-card" id="sec-parcelas-recebimento">
+              <span class="block text-[11px] text-slate-500 font-bold mb-3 uppercase">Parcelamento</span>
+              <input type="number" id="input-parcelas-ext" value="1" min="1" class="text-input" placeholder="Nº de Parcelas" />
+            </div>
           </div>
-          <button type="submit" class="w-full bg-blue-400 py-4 rounded-2xl text-slate-900 font-bold mt-4 uppercase tracking-widest text-xs">Salvar Registro</button>
+          
+          <div class="flex flex-col gap-3 mt-4">
+            <button type="submit" id="btn-salvar" class="w-full bg-blue-400 py-4 rounded-2xl text-slate-900 font-bold tracking-widest uppercase text-xs">Salvar Registro</button>
+            <button type="button" id="btn-excluir" onclick="deleteEntry()" class="w-full bg-red-500/10 text-red-400 py-3 rounded-xl font-bold uppercase tracking-widest text-[10px] hidden">Excluir Registro</button>
+          </div>
         </form>
       </div>
     </div>
@@ -530,19 +549,25 @@
     <div id="toast" class="fixed top-12 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-3 rounded-full font-bold text-sm shadow-2xl opacity-0 transition-all z-[300]"></div>
 
     <script>
-      const STORAGE_KEY = "financas_ai_v14_final";
+      const STORAGE_KEY = "financas_ai_v15_final";
       let dados = {
         lancamentos: [],
         bancos: [
-          { nome: "Nubank", fechamento: 4, vencimento: 11, saldoInicial: 0 },
-          { nome: "Inter", fechamento: 16, vencimento: 23, saldoInicial: 0 },
+          { nome: "Nubank", tipo: "credito", fechamento: 4, vencimento: 11, saldoInicial: 0 },
+          { nome: "Inter", tipo: "credito", fechamento: 16, vencimento: 23, saldoInicial: 0 },
         ],
         config: { 
           notificacoesAtivas: false,
-          pix: "" // Chave PIX armazenada nas configurações
+          pix: ""
         },
       };
       let currentFormMode = "gasto";
+
+      function toggleBankDateInputs() {
+          const type = document.querySelector('input[name="new-bank-type"]:checked').value;
+          const container = document.getElementById("new-bank-dates-container");
+          container.classList.toggle("hidden", type === "debito");
+      }
 
       function setFormMode(mode) {
         currentFormMode = mode;
@@ -564,24 +589,31 @@
         const metodo = document.getElementById("input-metodo").value;
         const isRecebimento = currentFormMode === "recebimento";
         const isEuPaguei = !isRecebimento && subTipo === "eu";
+        
         document.getElementById("sec-quem-pagou").classList.toggle("hidden", isRecebimento);
         document.getElementById("container-eu-paguei").classList.toggle("hidden", !isEuPaguei);
         document.getElementById("container-externo").classList.toggle("hidden", isEuPaguei);
+        
         document.getElementById("sec-parcelas").classList.toggle("hidden", !isEuPaguei || metodo !== "credito");
+        document.getElementById("sec-parcelas-recebimento").classList.toggle("hidden", isEuPaguei);
       }
 
-      function toggleDivisaoAmigos() {
+      function toggleDivisaoAmigos(forceOpen = false) {
         const cont = document.getElementById("divisao-amigos-inputs");
         const arrow = document.getElementById("arrow-divisao");
-        cont.classList.toggle("hidden");
+        if (forceOpen) {
+          cont.classList.remove("hidden");
+        } else {
+          cont.classList.toggle("hidden");
+        }
         arrow.style.transform = cont.classList.contains("hidden") ? "rotate(0deg)" : "rotate(180deg)";
       }
 
-      function addAmigoRow() {
+      function addAmigoRow(nome = "", valor = "") {
         const container = document.getElementById("amigos-rows-container");
         const div = document.createElement("div");
         div.className = "flex gap-2";
-        div.innerHTML = `<input type="text" placeholder="Nome" class="text-input text-xs amigo-nome-input"><input type="number" step="0.01" placeholder="R$ valor" class="text-input text-xs amigo-valor-input w-24"><button type="button" onclick="removeAmigoRow(this)" class="delete-btn-sm"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>`;
+        div.innerHTML = `<input type="text" placeholder="Nome" class="text-input text-xs amigo-nome-input" value="${nome}"><input type="number" step="0.01" placeholder="R$ valor" class="text-input text-xs amigo-valor-input w-24" value="${valor}"><button type="button" onclick="removeAmigoRow(this)" class="delete-btn-sm"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button>`;
         container.appendChild(div);
       }
 
@@ -589,76 +621,168 @@
 
       function handleFormSubmit(e) {
         e.preventDefault();
+        const editId = document.getElementById("edit-id").value;
         const desc = document.getElementById("input-desc").value;
         const valorTotal = parseFloat(document.getElementById("input-valor").value);
-        const dataIso = new Date().toISOString();
         const subTipoEl = document.querySelector('input[name="sub_tipo_gasto"]:checked');
         const subTipo = subTipoEl ? subTipoEl.value : "eu";
 
-        let novo = { id: Date.now(), desc, valorTotal, dataRegistro: dataIso, amigos: [] };
+        const originalItem = editId ? dados.lancamentos.find(x => x.id == editId) : null;
+        const dataIso = originalItem ? originalItem.dataRegistro : new Date().toISOString();
+
+        let novo = { id: editId ? parseInt(editId) : Date.now(), desc, valorTotal, dataRegistro: dataIso, amigos: [], pago: originalItem ? originalItem.pago : false };
+        
         if (currentFormMode === "gasto") {
           if (subTipo === "eu") {
             novo.tipo = "gasto_eu";
-            novo.banco = document.querySelector('input[name="banco"]:checked').value;
+            const bancoSelecionado = document.querySelector('input[name="banco"]:checked');
+            novo.banco = bancoSelecionado ? bancoSelecionado.value : "";
             novo.metodo = document.getElementById("input-metodo").value;
             novo.parcelas = novo.metodo === "credito" ? parseInt(document.getElementById("input-parcelas").value) : 1;
             novo.categoria = document.getElementById("input-cat").value;
             document.querySelectorAll("#amigos-rows-container > div").forEach((row) => {
               const nome = row.querySelector(".amigo-nome-input").value.trim();
               const valor = parseFloat(row.querySelector(".amigo-valor-input").value);
-              if (nome && valor) novo.amigos.push({ nome, valor });
+              let amigoPago = false;
+              if (originalItem && originalItem.amigos) {
+                  const amigoOriginal = originalItem.amigos.find(a => a.nome === nome);
+                  if (amigoOriginal) amigoPago = amigoOriginal.pago;
+              }
+              if (nome && valor) novo.amigos.push({ nome, valor, pago: amigoPago });
             });
           } else {
             novo.tipo = "gasto_alguem";
             novo.amigoNome = document.getElementById("input-nome-externo").value.trim();
-            novo.valorTotal = -valorTotal;
+            novo.parcelas = parseInt(document.getElementById("input-parcelas-ext").value) || 1;
+            novo.valorTotal = -valorTotal; 
           }
         } else {
           novo.tipo = "recebimento";
           novo.amigoNome = document.getElementById("input-nome-externo").value.trim();
+          novo.parcelas = parseInt(document.getElementById("input-parcelas-ext").value) || 1;
         }
-        dados.lancamentos.push(novo);
+
+        if (editId) {
+            const idx = dados.lancamentos.findIndex(l => l.id == editId);
+            if (idx !== -1) dados.lancamentos[idx] = novo;
+        } else {
+            dados.lancamentos.push(novo);
+        }
+
         saveData();
         renderDashboard();
         closeForm();
         e.target.reset();
         document.getElementById("amigos-rows-container").innerHTML = "";
-        showToast("Registro Salvo!");
+        showToast(editId ? "Atualizado com sucesso!" : "Registro Salvo!");
+      }
+
+      function deleteEntry() {
+          const editId = document.getElementById("edit-id").value;
+          if (!editId) return;
+          if (confirm("Deseja apagar este lançamento permanentemente?")) {
+              dados.lancamentos = dados.lancamentos.filter(l => l.id != editId);
+              saveData();
+              renderDashboard();
+              closeForm();
+              showToast("Registro excluído.");
+          }
+      }
+
+      function openForm(editId = null) {
+          const form = document.getElementById("financeForm");
+          const idInput = document.getElementById("edit-id");
+          const btnExcluir = document.getElementById("btn-excluir");
+          const btnSalvar = document.getElementById("btn-salvar");
+
+          form.reset();
+          document.getElementById("amigos-rows-container").innerHTML = "";
+          document.getElementById("divisao-amigos-inputs").classList.add("hidden");
+          document.getElementById("arrow-divisao").style.transform = "rotate(0deg)";
+          
+          updateBancosRadio();
+
+          if (editId) {
+              const item = dados.lancamentos.find(l => l.id == editId);
+              if (item) {
+                  idInput.value = editId;
+                  btnExcluir.classList.remove("hidden");
+                  btnSalvar.innerText = "Atualizar Registro";
+
+                  document.getElementById("input-desc").value = item.desc;
+                  document.getElementById("input-valor").value = Math.abs(item.valorTotal);
+
+                  if (item.tipo === "recebimento") {
+                      setFormMode("recebimento");
+                      document.getElementById("input-nome-externo").value = item.amigoNome || "";
+                      document.getElementById("input-parcelas-ext").value = item.parcelas || 1;
+                  } else if (item.tipo === "gasto_alguem") {
+                      setFormMode("gasto");
+                      document.querySelector('input[name="sub_tipo_gasto"][value="outro"]').checked = true;
+                      document.getElementById("input-nome-externo").value = item.amigoNome || "";
+                      document.getElementById("input-parcelas-ext").value = item.parcelas || 1;
+                  } else {
+                      setFormMode("gasto");
+                      document.querySelector('input[name="sub_tipo_gasto"][value="eu"]').checked = true;
+                      document.getElementById("input-cat").value = item.categoria || "compras";
+                      document.getElementById("input-metodo").value = item.metodo || "pix";
+                      document.getElementById("input-parcelas").value = item.parcelas || 1;
+
+                      const radioBanco = document.querySelector(`input[name="banco"][value="${item.banco}"]`);
+                      if (radioBanco) radioBanco.checked = true;
+
+                      if (item.amigos && item.amigos.length > 0) {
+                          toggleDivisaoAmigos(true);
+                          item.amigos.forEach(a => addAmigoRow(a.nome, a.valor));
+                      }
+                  }
+              }
+          } else {
+              idInput.value = "";
+              btnExcluir.classList.add("hidden");
+              btnSalvar.innerText = "Salvar Registro";
+              setFormMode("gasto");
+          }
+
+          updateFormVisibility();
+          document.getElementById("formSheet").classList.add("active");
+          document.getElementById("scrim").classList.add("active");
       }
 
       function getInvoiceMonth(dateStr, bancoNome, metodo) {
         const date = new Date(dateStr);
-        if (metodo !== "credito") return new Date(date.getFullYear(), date.getMonth(), 1);
-        const b = dados.bancos.find((b) => b.nome === bancoNome) || { fechamento: 10 };
+        const b = dados.bancos.find((b) => b.nome === bancoNome) || { tipo: 'debito' };
+        
+        if (metodo !== "credito" || b.tipo === "debito") return new Date(date.getFullYear(), date.getMonth(), 1);
         if (date.getDate() >= b.fechamento) return new Date(date.getFullYear(), date.getMonth() + 1, 1);
         return new Date(date.getFullYear(), date.getMonth(), 1);
       }
 
-      function marcarAmigoComoPago(nomeAmigo) {
-        const filtroMesStr = document.getElementById("filtro-mes").value;
-        const [fY, fM] = filtroMesStr.split("-").map(Number);
-        
-        dados.lancamentos = dados.lancamentos.filter(l => {
-            const dStart = getInvoiceMonth(l.dataRegistro, l.banco, l.metodo);
-            const isNoMes = dStart.getFullYear() === fY && dStart.getMonth() === (fM - 1);
-            
-            if (isNoMes && l.amigoNome === nomeAmigo) return false;
-            
-            if (isNoMes && l.tipo === "gasto_eu") {
-                l.amigos = l.amigos.filter(a => a.nome !== nomeAmigo);
+      function marcarAmigoComoPago(nomeAmigo, idLancamento = null) {
+        dados.lancamentos = dados.lancamentos.map(l => {
+            if (idLancamento && l.id === idLancamento) {
+                return { ...l, pago: true };
             }
-            return true;
+            if (l.tipo === "gasto_eu") {
+                const novosAmigos = l.amigos.map(a => {
+                    if (a.nome === nomeAmigo) return { ...a, pago: true };
+                    return a;
+                });
+                return { ...l, amigos: novosAmigos };
+            }
+            if (l.amigoNome === nomeAmigo) {
+                return { ...l, pago: true };
+            }
+            return l;
         });
-
         saveData();
         renderDashboard();
         showToast(`Pagamento de ${nomeAmigo} registrado!`);
       }
 
       function cobrarNoWhatsapp(nomeAmigo, total, logs) {
-        // Agora usa a chave PIX definida pelo usuário nas configurações
         const chavePix = dados.config.pix || "[CHAVE PIX NÃO CONFIGURADA]";
-        const msg = `Olá ${nomeAmigo}! 👋\n\nEstou passando para te enviar o resumo das nossas despesas deste mês:\n\n*Detalhes:*\n${logs.map(l => "• " + l).join("\n")}\n\n*Total a pagar: R$ ${total.toFixed(2)}*\n\nMeu pix é ${chavePix}. Não se esqueça de mandar o comprovante! 💸`;
+        const msg = `Olá ${nomeAmigo}! 👋\n\nEstou passando para te enviar o resumo das nossas despesas:\n\n*Detalhes:*\n${logs.map(l => "• " + l).join("\n")}\n\n*Total a pagar: R$ ${total.toFixed(2)}*\n\nMeu pix é ${chavePix}. Não se esqueça de mandar o comprovante! 💸`;
         const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
         window.open(url, '_blank');
       }
@@ -675,7 +799,7 @@
         contAmigos.innerHTML = "";
 
         let totalAmigosGlobal = 0;
-        const mapaAmigos = {};
+        const mapaAmigos = {}; 
         let tGastosNoBanco = 0;
         let saldoInicialTotal = dados.bancos.reduce((acc, b) => acc + (b.saldoInicial || 0), 0);
 
@@ -689,60 +813,67 @@
               const vp = l.valorTotal / l.parcelas;
               somaBancoNoMes += vp;
               tGastosNoBanco += vp;
-              items += `<div class="flex justify-between py-2 border-b border-white/5 last:border-0"><div><p class="text-[12px] text-white font-medium">${l.desc}</p><p class="text-[9px] text-slate-500 uppercase">${l.metodo} • ${l.parcelas > 1 ? `${diff + 1}/${l.parcelas}` : "À Vista"}</p></div><p class="text-[12px] font-bold">R$ ${vp.toFixed(2)}</p></div>`;
-
-              l.amigos.forEach((amg) => {
-                if (!mapaAmigos[amg.nome]) mapaAmigos[amg.nome] = { total: 0, logs: [] };
-                const valorParteAmigo = amg.valor / l.parcelas;
-                mapaAmigos[amg.nome].total += valorParteAmigo;
-                mapaAmigos[amg.nome].logs.push(`${l.desc}: R$ ${valorParteAmigo.toFixed(2)}`);
-              });
+              items += `<div class="flex justify-between items-center py-2 border-b border-white/5 last:border-0"><div><p class="text-[12px] text-white font-medium">${l.desc}</p><p class="text-[9px] text-slate-500 uppercase">${l.metodo} • ${l.parcelas > 1 ? `${diff + 1}/${l.parcelas}` : "À Vista"}</p></div><div class="flex items-center gap-3"><p class="text-[12px] font-bold">R$ ${vp.toFixed(2)}</p><svg onclick="openForm(${l.id})" class="text-blue-400 cursor-pointer opacity-70 hover:opacity-100 transition-opacity shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div></div>`;
             }
           });
-          if (somaBancoNoMes > 0) {
-            contBancos.innerHTML += `<div class="md-card"><div class="flex justify-between items-center mb-4"><div><span class="text-[10px] font-black text-blue-400 uppercase tracking-widest">${b.nome}</span></div><p class="text-[16px] font-black text-white">R$ ${somaBancoNoMes.toFixed(2)}</p></div><div class="bg-black/20 rounded-xl p-3">${items}</div></div>`;
+          if (somaBancoNoMes > 0 || b.saldoInicial > 0) {
+            contBancos.innerHTML += `<div class="md-card"><div class="flex justify-between items-center mb-4"><div><span class="text-[10px] font-black text-blue-400 uppercase tracking-widest">${b.nome}</span></div><p class="text-[16px] font-black text-white">R$ ${somaBancoNoMes.toFixed(2)}</p></div><div class="bg-black/20 rounded-xl p-3">${items || '<p class="text-[10px] text-slate-500">Sem gastos este mês</p>'}</div></div>`;
           }
         });
 
-        dados.lancamentos.filter((l) => l.tipo === "gasto_alguem").forEach((l) => {
-          const dStart = getInvoiceMonth(l.dataRegistro, l.banco, l.metodo);
-          if(dStart.getFullYear() === fY && dStart.getMonth() === (fM - 1)) {
-            contBancos.innerHTML += `<div class="md-card border-red-500/20"><div class="flex justify-between items-center"><p class="text-[10px] font-black text-red-400 uppercase">Devo para: ${l.amigoNome}</p><p class="font-bold">R$ ${Math.abs(l.valorTotal).toFixed(2)}</p></div><p class="text-[11px] text-slate-500">${l.desc}</p></div>`;
-            if (!mapaAmigos[l.amigoNome]) mapaAmigos[l.amigoNome] = { total: 0, logs: [] };
-            mapaAmigos[l.amigoNome].total += l.valorTotal;
-            mapaAmigos[l.amigoNome].logs.push(`${l.desc}: -R$ ${Math.abs(l.valorTotal).toFixed(2)}`);
-          }
-        });
+        dados.lancamentos.forEach((l) => {
+            const dStart = getInvoiceMonth(l.dataRegistro, l.banco, l.metodo);
+            
+            if (l.tipo === "gasto_eu") {
+                l.amigos.forEach(amg => {
+                    if (!amg.pago) {
+                        if (!mapaAmigos[amg.nome]) mapaAmigos[amg.nome] = { total: 0, logs: [], logsText: [] };
+                        const diffMeses = (dataFiltro.getFullYear() - dStart.getFullYear()) * 12 + (dataFiltro.getMonth() - dStart.getMonth());
+                        
+                        if (diffMeses >= 0 && diffMeses < l.parcelas) {
+                           const valorParcelaAmigo = amg.valor / l.parcelas;
+                           mapaAmigos[amg.nome].total += valorParcelaAmigo;
+                           mapaAmigos[amg.nome].logsText.push(`${l.desc} (${diffMeses + 1}/${l.parcelas}): R$ ${valorParcelaAmigo.toFixed(2)}`);
+                           mapaAmigos[amg.nome].logs.push(`<div class="flex justify-between items-center py-1 border-b border-white/5 last:border-0"><span>${l.desc} (${diffMeses + 1}/${l.parcelas}): R$ ${valorParcelaAmigo.toFixed(2)}</span><svg onclick="openForm(${l.id})" class="text-blue-400 cursor-pointer opacity-70 hover:opacity-100 transition-opacity ml-2 shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>`);
+                        }
+                    }
+                });
+            }
 
-        dados.lancamentos.filter((l) => l.tipo === "recebimento").forEach((l) => {
-          const dStart = getInvoiceMonth(l.dataRegistro, l.banco, l.metodo);
-          if(dStart.getFullYear() === fY && dStart.getMonth() === (fM - 1)) {
-            if (!mapaAmigos[l.amigoNome]) mapaAmigos[l.amigoNome] = { total: 0, logs: [] };
-            mapaAmigos[l.amigoNome].total += l.valorTotal;
-            mapaAmigos[l.amigoNome].logs.push(`${l.desc}: +R$ ${l.valorTotal.toFixed(2)}`);
-          }
+            if ((l.tipo === "recebimento" || l.tipo === "gasto_alguem") && !l.pago) {
+                const diffMeses = (dataFiltro.getFullYear() - dStart.getFullYear()) * 12 + (dataFiltro.getMonth() - dStart.getMonth());
+                if (diffMeses >= 0 && diffMeses < l.parcelas) {
+                    const nomeStr = l.amigoNome || "Outro";
+                    if (!mapaAmigos[nomeStr]) mapaAmigos[nomeStr] = { total: 0, logs: [], logsText: [] };
+                    const valorParcela = l.valorTotal / l.parcelas;
+                    mapaAmigos[nomeStr].total += valorParcela;
+                    mapaAmigos[nomeStr].logsText.push(`${l.desc} (${diffMeses + 1}/${l.parcelas}): R$ ${Math.abs(valorParcela).toFixed(2)}`);
+                    mapaAmigos[nomeStr].logs.push(`<div class="flex justify-between items-center py-1 border-b border-white/5 last:border-0"><span>${l.desc} (${diffMeses + 1}/${l.parcelas}): R$ ${Math.abs(valorParcela).toFixed(2)}</span><svg onclick="openForm(${l.id})" class="text-blue-400 cursor-pointer opacity-70 hover:opacity-100 transition-opacity ml-2 shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>`);
+                }
+            }
         });
 
         let totalAReceberGeral = 0;
         Object.keys(mapaAmigos).forEach((nome) => {
           const saldoAmigo = mapaAmigos[nome].total;
-          if (saldoAmigo > 0) {
-            totalAReceberGeral += saldoAmigo;
-            const logStr = JSON.stringify(mapaAmigos[nome].logs);
+          if (Math.abs(saldoAmigo) > 0.01) {
+            if (saldoAmigo > 0) totalAReceberGeral += saldoAmigo;
+            const logStr = JSON.stringify(mapaAmigos[nome].logsText);
+            const isDevedor = saldoAmigo < 0;
             contAmigos.innerHTML += `
-              <div class="md-card">
+              <div class="md-card ${isDevedor ? 'border-red-500/20' : ''}">
                 <div class="flex justify-between items-center mb-2">
                   <span class="font-bold text-sm text-white">${nome}</span>
-                  <span class="font-black text-green-400">R$ ${saldoAmigo.toFixed(2)}</span>
+                  <span class="font-black ${isDevedor ? 'text-red-400' : 'text-green-400'}">R$ ${Math.abs(saldoAmigo).toFixed(2)}</span>
                 </div>
-                <div class="bg-black/20 p-2 rounded-lg text-[10px] text-slate-400 leading-relaxed">
-                  ${mapaAmigos[nome].logs.join("<br>")}
+                <div class="bg-black/20 p-2 rounded-lg text-[10px] text-slate-400 leading-relaxed mb-3">
+                  ${mapaAmigos[nome].logs.join("")}
                 </div>
                 <div class="amigo-actions">
-                    <button onclick='marcarAmigoComoPago("${nome}")' class="btn-pago">PAGO</button>
-                    <button onclick='cobrarNoWhatsapp("${nome}", ${saldoAmigo}, ${logStr})' class="btn-whatsapp">
+                    <button onclick='marcarAmigoComoPago("${nome}")' class="btn-pago">${isDevedor ? 'PAGUEI' : 'PAGO'}</button>
+                    ${!isDevedor ? `<button onclick='cobrarNoWhatsapp("${nome}", ${saldoAmigo}, ${logStr})' class="btn-whatsapp">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.414 0 .018 5.394 0 12.03c0 2.122.554 4.197 1.604 6.04L0 24l6.104-1.601a11.812 11.812 0 005.94 1.597h.005c6.632 0 12.028-5.394 12.03-12.032a11.761 11.761 0 00-3.486-8.452"/></svg>
-                    </button>
+                    </button>` : ''}
                 </div>
               </div>`;
           }
@@ -752,7 +883,7 @@
         const saldoFinal = saldoInicialTotal + totalAmigosGlobal - tGastosNoBanco;
         document.getElementById("saldo-geral").innerText = `R$ ${saldoFinal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
         document.getElementById("saldo-geral").className = saldoFinal >= 0 ? "text-green-400 font-bold" : "text-red-400 font-bold";
-        document.getElementById("total-amigos-mes").innerText = `Total a Receber: R$ ${totalAReceberGeral.toFixed(2)}`;
+        document.getElementById("total-amigos-mes").innerText = `Pendente Total: R$ ${totalAReceberGeral.toFixed(2)}`;
         document.getElementById("total-amigos-mes").className = "text-[10px] font-bold text-green-400";
       }
 
@@ -773,7 +904,7 @@
         if (!list) return;
         list.innerHTML = "";
         dados.bancos.forEach((b, i) => {
-          list.innerHTML += `<div class="md-card flex items-center justify-between py-4"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="font-bold text-sm text-white">${b.nome}</span></div><div class="flex items-center gap-2"><span class="text-[10px] text-slate-500 font-bold">R$</span><input type="number" step="0.01" class="input-inline-edit" value="${b.saldoInicial.toFixed(2)}" onchange="updateSaldoBanco(${i}, this.value)"></div></div>`;
+          list.innerHTML += `<div class="md-card flex items-center justify-between py-4"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center text-green-400"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><span class="font-bold text-sm text-white">${b.nome}</span></div><div class="flex items-center gap-2"><span class="text-[10px] text-slate-500 font-bold">R$</span><input type="number" step="0.01" class="input-inline-edit" value="${(b.saldoInicial || 0).toFixed(2)}" onchange="updateSaldoBanco(${i}, this.value)"></div></div>`;
         });
       }
 
@@ -790,10 +921,21 @@
 
       function addBank() {
         const nome = document.getElementById("new-bank-name").value.trim();
-        const fecha = parseInt(document.getElementById("new-bank-closing").value);
-        const vence = parseInt(document.getElementById("new-bank-due").value);
-        if (!nome || isNaN(fecha) || isNaN(vence)) { showToast("Preencha tudo"); return; }
-        dados.bancos.push({ nome, fechamento: fecha, vencimento: vence, saldoInicial: 0 });
+        const tipo = document.querySelector('input[name="new-bank-type"]:checked').value;
+        let fecha = parseInt(document.getElementById("new-bank-closing").value);
+        let vence = parseInt(document.getElementById("new-bank-due").value);
+        
+        if (!nome) { showToast("Dê um nome ao banco"); return; }
+        if (tipo === "credito" && (isNaN(fecha) || isNaN(vence))) { showToast("Preencha as datas"); return; }
+        
+        dados.bancos.push({ 
+            nome, 
+            tipo, 
+            fechamento: tipo === 'credito' ? fecha : 0, 
+            vencimento: tipo === 'credito' ? vence : 0, 
+            saldoInicial: 0 
+        });
+        
         saveData(); renderConfigBancos(); renderSaldosAjustes(); updateBancosRadio(); renderDashboard();
         document.getElementById("new-bank-name").value = "";
         document.getElementById("new-bank-closing").value = "";
@@ -811,7 +953,8 @@
         if (!list) return;
         list.innerHTML = "";
         dados.bancos.forEach((b, i) => {
-          list.innerHTML += `<div class="md-card flex items-center justify-between py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div><div><p class="font-bold text-sm text-white">${b.nome}</p><p class="text-[9px] text-slate-500 uppercase">Fecha dia ${b.fechamento} • Vence dia ${b.vencimento}</p></div></div><button onclick="removeBank(${i})" class="delete-btn-sm h-10 w-10"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button></div>`;
+          const infoDatas = b.tipo === "credito" ? `Fecha dia ${b.fechamento} • Vence dia ${b.vencimento}` : "Conta de Débito";
+          list.innerHTML += `<div class="md-card flex items-center justify-between py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div><div><p class="font-bold text-sm text-white">${b.nome} <span class="text-[8px] opacity-50 px-1 border border-white/20 rounded">${b.tipo.toUpperCase()}</span></p><p class="text-[9px] text-slate-500 uppercase">${infoDatas}</p></div></div><button onclick="removeBank(${i})" class="delete-btn-sm h-10 w-10"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg></button></div>`;
         });
       }
 
@@ -856,7 +999,6 @@
         if (content) content.classList.add("active");
       }
 
-      function openForm() { document.getElementById("formSheet").classList.add("active"); document.getElementById("scrim").classList.add("active"); }
       function closeForm() { document.getElementById("formSheet").classList.remove("active"); document.getElementById("scrim").classList.remove("active"); }
       function showToast(m) { const t = document.getElementById("toast"); t.innerText = m; t.style.opacity = "1"; setTimeout(() => (t.style.opacity = "0"), 2000); }
       function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify(dados)); }
@@ -865,9 +1007,8 @@
         const s = localStorage.getItem(STORAGE_KEY); 
         if (s) {
           const loaded = JSON.parse(s);
-          // Migração suave: garante que config e pix existam se vierem de versão antiga
           if (!loaded.config) loaded.config = { notificacoesAtivas: false, pix: "" };
-          if (loaded.config.pix === undefined) loaded.config.pix = "";
+          loaded.lancamentos = loaded.lancamentos.map(l => ({ ...l, pago: l.pago || false }));
           dados = loaded;
         }
       }
@@ -880,8 +1021,8 @@
         updateBancosRadio(); 
         renderDashboard(); 
         updateFormVisibility();
+        toggleBankDateInputs();
         
-        // Inicializa inputs da aba Ajustes
         const toggle = document.getElementById("notif-toggle");
         if (toggle) toggle.checked = dados.config.notificacoesAtivas;
         
